@@ -2,9 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>$Title$</title>
+    <title>Tracking Example</title>
 </head>
 <body>
-$END$
+    Test-Content
+
+
+    <script>
+        var settings = {
+            phsrid: 13245,
+            mailingid: 54321,
+            anonymizeip: false
+        };
+
+        (function(p, h, s, r) {
+            r = p.createElement(s);
+            r.src = h;
+            p.body.appendChild(r);
+        })(document, 'http://localhost:63342/website_tracking/src/tracking.js', 'script');
+    </script>
+
 </body>
 </html>
