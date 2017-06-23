@@ -2,11 +2,17 @@
  * Created by janschopke on 18.06.17.
  */
 
+String.prototype.replaceAll = function(str1, str2, ignore)
+{
+    return this.replace(new RegExp(str1.replace(/([\/\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|\<\>\-\&])/g,"\\$&"),(ignore?"gi":"g")),(typeof(str2)=="string")?str2.replace(/\$/g,"$$$$"):str2);
+}
+
 window.track = (function(){
 
     var settings = {
         "anonymizeip": false,
-        "phsrid": null
+        "phsrid": null,
+        "debug": false
     };
 
     var result = {};
@@ -30,8 +36,15 @@ window.track = (function(){
         return 'R' + Math.floor((Math.random() * 1000) + 1);
     }
 
+    function log(message) {
+        if(settings.debug) {
+            console.log(message);
+        }
+    }
+
     function getCurrentTimestamp () {
         result['timestamp'] = new Date();
+        log("setting timestamp");
         checkForCompleteResult();
     }
 
@@ -42,21 +55,19 @@ window.track = (function(){
 
     function fetchCurrentUserID () {
         var userID = getUrlParameter('user') || generateRandomNumber();
-        localforage.setItem('userid', userID, function(e) {
-            result['userID'] = userID;
-            checkForCompleteResult();
-        });
+        localStorage.setItem("userid", userID);
+        result['userID'] = userID;
+        checkForCompleteResult();
     }
 
     function getCurrentUserID () {
-        localforage.getItem('userid').then(function(value) {
-            if(value !== null) {
-                result['userID'] = value;
-                checkForCompleteResult();
-            } else {
-                fetchCurrentUserID();
-            }
-        });
+        var userid = getUrlParameter('user') || localStorage.getItem('userid');
+        if(userid !== null) {
+            result['userID'] = userid;
+            checkForCompleteResult();
+        } else {
+            fetchCurrentUserID();
+        }
     }
 
     function getCurrentBrowser () {
@@ -87,34 +98,54 @@ window.track = (function(){
     }
 
     function getCurrentIpAddress () {
-        $.getJSON('//freegeoip.net/json/?callback=?', function(data) {
-            result['ip'] = data.ip;
-            checkForCompleteResult();
-        });
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '//freegeoip.net/json/');
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                result['ip'] =  JSON.parse(xhr.responseText).ip;
+                checkForCompleteResult();
+            }
+            else {
+                return 'not defined';
+            }
+        };
+        xhr.send();
     }
 
-    function prepareWebsite() {
-        var script1 = document.createElement('script');
-        script1.src = 'bower_components/jquery/dist/jquery.min.js';
-        var script2 = document.createElement('script');
-        script2.src = 'bower_components/localforage/dist/localforage.js';
+    function prepareFormSubmit() {
+        var allForms = document.querySelectorAll('[data-conversion]');
 
-        var scripts = document.getElementsByTagName('script');
-        var last = scripts[scripts.length -1];
-        document.body.insertBefore(script1, last);
-        document.body.insertBefore(script2, last);
-        setTimeout(function(){
-            initLocalForage();
-        }, 100);
-    }
+        allForms.forEach(function(el) {
+            el.onsubmit = function(event) {
 
-    function initLocalForage() {
-        localforage.config({
-            driver      : localforage.WEBSQL,
-            size        : 4980736,
-            storeName   : 'keyvaluepairs'
+                event.preventDefault();
+                console.log(el.dataset.conversion);
+                var formResult = {
+                  'mailingid' : result.mailingid,
+                  'timestamp': result.timestamp,
+                  'userID': result.userID,
+                    'conversion': el.dataset.conversion
+                };
+
+                if(el.dataset.fields) {
+                    var fieldData = {};
+                    var fields = JSON.parse(el.dataset.fields.replaceAll("'", '"'));
+                    Object.keys(fields).forEach(function(key) {
+                       fieldData[key] = document.getElementById(fields[key]).value;
+                    });
+                    formResult["fieldData"] = fieldData;
+                }
+
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", settings['phsrserver'] + '/tracking/webconversion');
+                xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                var that = this;
+                xhr.onreadystatechange = function() {
+                    that.submit();
+                }
+                xhr.send(JSON.stringify(formResult));
+            }
         });
-        generateDataReport();
     }
 
     function generateDataReport() {
@@ -132,7 +163,11 @@ window.track = (function(){
     function checkForCompleteResult() {
         if((!!result['ip'] || settings.anonymizeip == true) && !!result['userID'] && !!result['timestamp'] && !!result['browser'] && !!result['os'] && !!result['phsrid'] && !!result['url'] && !!result['mailingid']) {
             console.log(result)
-            //AJAX post here.
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", settings['phsrserver'] + '/tracking/webvisit');
+            xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhr.send(JSON.stringify(result));
         }
     }
 
@@ -141,7 +176,8 @@ window.track = (function(){
             for(var key in json) settings[key] = json[key];
             result['phsrid'] = settings['phsrid'];
             result['mailingid'] = settings['mailingid'];
-            prepareWebsite();
+            generateDataReport();
+            prepareFormSubmit();
         }
     };
 
