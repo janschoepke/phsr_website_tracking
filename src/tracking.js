@@ -6,7 +6,9 @@ window.track = (function(){
 
     var settings = {
         "anonymizeip": false,
-        "phsrid": null,
+        "phsrid": 0,
+        "mailingid": 0,
+        "phsrserver": "",
         "debug": false
     };
 
@@ -111,7 +113,7 @@ window.track = (function(){
 
     function getCurrentIpAddress () {
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', '//freegeoip.net/json/');
+        xhr.open('POST', settings['phsrserver'] + '/tracking/get-ip-address');
         xhr.onload = function() {
             if (xhr.status === 200) {
                 result['ip'] =  JSON.parse(xhr.responseText).ip;
