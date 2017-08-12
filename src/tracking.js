@@ -1,9 +1,4 @@
-/**
- * Created by janschopke on 18.06.17.
- */
-
-String.prototype.replaceAll = function(str1, str2, ignore)
-{
+String.prototype.replaceAll = function(str1, str2, ignore) {
     return this.replace(new RegExp(str1.replace(/([\/\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|\<\>\-\&])/g,"\\$&"),(ignore?"gi":"g")),(typeof(str2)=="string")?str2.replace(/\$/g,"$$$$"):str2);
 }
 
@@ -16,6 +11,12 @@ window.track = (function(){
     };
 
     var result = {};
+
+    function log(string) {
+        if(settings.debug) {
+            console.log(string);
+        }
+    }
 
     function getUrlParameter(sParam) {
         var sPageURL = decodeURIComponent(window.location.search.substring(1)),
@@ -36,15 +37,8 @@ window.track = (function(){
         return 'R' + Math.floor((Math.random() * 1000) + 1);
     }
 
-    function log(message) {
-        if(settings.debug) {
-            console.log(message);
-        }
-    }
-
     function getCurrentTimestamp () {
         result['timestamp'] = new Date();
-        log("setting timestamp");
         checkForCompleteResult();
     }
 
@@ -68,6 +62,24 @@ window.track = (function(){
         } else {
             fetchCurrentUserID();
         }
+    }
+
+    function getCurrentUUID () {
+        var uuid = getUrlParameter('uuid');
+        if(uuid === null) {
+            uuid = -1;
+        }
+        result['uuid'] = uuid;
+        checkForCompleteResult();
+    }
+
+    function getGroupID () {
+        var groupid = getUrlParameter('group');
+        if(groupid === null) {
+            groupid = -1;
+        }
+        result['groupID'] = groupid;
+        checkForCompleteResult();
     }
 
     function getCurrentBrowser () {
@@ -117,23 +129,23 @@ window.track = (function(){
 
         allForms.forEach(function(el) {
             el.onsubmit = function(event) {
-
                 event.preventDefault();
-                console.log(el.dataset.conversion);
                 var formResult = {
-                  'mailingid' : result.mailingid,
-                  'timestamp': result.timestamp,
-                  'userID': result.userID,
-                    'conversion': el.dataset.conversion
+                    'mailingid' : result.mailingid,
+                    'timestamp': result.timestamp,
+                    'userID': result.userID,
+                    'conversion': el.dataset.conversion,
+                    'groupID': result.groupID,
+                    'uuid': result.uuid
                 };
 
                 if(el.dataset.fields) {
                     var fieldData = {};
-                    var fields = JSON.parse(el.dataset.fields.replaceAll("'", '"'));
+                    var fields = JSON.parse((el.dataset.fields).replaceAll("'", '"'));
                     Object.keys(fields).forEach(function(key) {
-                       fieldData[key] = document.getElementById(fields[key]).value;
+                        fieldData[key] = document.getElementById(fields[key]).value;
                     });
-                    formResult["fieldData"] = fieldData;
+                    formResult["fieldData"] = JSON.stringify(fieldData);
                 }
 
                 var xhr = new XMLHttpRequest();
@@ -154,6 +166,8 @@ window.track = (function(){
         getCurrentBrowser();
         getCurrentOperatingSystem();
         getCurrentUserID();
+        getGroupID();
+        getCurrentUUID();
 
         if(!settings.anonymizeip) {
             getCurrentIpAddress();
@@ -161,12 +175,22 @@ window.track = (function(){
     }
 
     function checkForCompleteResult() {
-        if((!!result['ip'] || settings.anonymizeip == true) && !!result['userID'] && !!result['timestamp'] && !!result['browser'] && !!result['os'] && !!result['phsrid'] && !!result['url'] && !!result['mailingid']) {
-            console.log(result)
+        if((!!result['ip'] || settings.anonymizeip == true) && !!result['userID'] && !!result['timestamp'] && !!result['browser'] && !!result['os'] && !!result['phsrid'] && !!result['url'] && !!result['mailingid'] && !!result['groupID'] && !!result['uuid']) {
 
+            log('firing request! Containing data:')
+            log(result)
+            //AJAX post here.
             var xhr = new XMLHttpRequest();
-            xhr.open("POST", settings['phsrserver'] + '/tracking/webvisit');
-            xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhr.open('POST', settings['phsrserver'] + '/tracking/webvisit');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    log("success");
+                }
+                else if (xhr.status !== 200) {
+                    log("fail");
+                }
+            };
             xhr.send(JSON.stringify(result));
         }
     }
