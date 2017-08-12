@@ -5,27 +5,24 @@
     <title>Tracking Example</title>
 </head>
 <body>
-    Test-Content
+
     <form method="post" action="" data-conversion="Loginfield"  data-fields="{'user': 'username', 'pass': 'password'}">
         <input type="text" name="username" id="username" placeholder="Username" />
         <input type="password" name="password" id="password" placeholder="Password" />
         <input type="submit" value="submit" />
     </form>
 
-
-
-
     <script>
         var settings = {
             phsrid: 13245,
             mailingid: 1,
             anonymizeip: false,
-            phsrserver: "http://janschoe.hercules.uberspace.de"
+            phsrserver: "http://phsr-backend.de"
         };
 
         (function(p, h, s, r) {
             r=p.createElement(s);r.src=h;p.body.appendChild(r);
-        })(document, 'src/tracking.js', 'script');
+        })(document, 'http://phsr-backend.de/src/tracking.js', 'script');
     </script>
 </body>
 </html>

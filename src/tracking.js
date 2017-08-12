@@ -179,7 +179,6 @@ window.track = (function(){
 
             log('firing request! Containing data:')
             log(result)
-            //AJAX post here.
             var xhr = new XMLHttpRequest();
             xhr.open('POST', settings['phsrserver'] + '/tracking/webvisit');
             xhr.setRequestHeader('Content-Type', 'application/json');
