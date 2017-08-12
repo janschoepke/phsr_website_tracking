@@ -1,4 +1,4 @@
-#phsr website tracking
+# phsr website tracking
 
 This script is used for tracking web statistics and conversions in phsr. There are no dependencies to other scripts or libs like jQuery, so this is really lightweight. To enable website tracking, just embed the following code before the closing body tag on website:
 
