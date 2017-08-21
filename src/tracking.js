@@ -9,7 +9,8 @@ window.track = (function(){
         "phsrid": 0,
         "mailingid": 0,
         "phsrserver": "",
-        "debug": false
+        "debug": false,
+        "useHistoryReplace": true
     };
 
     var result = {};
@@ -176,9 +177,16 @@ window.track = (function(){
         }
     }
 
-    function checkForCompleteResult() {
-        if((!!result['ip'] || settings.anonymizeip == true) && !!result['userID'] && !!result['timestamp'] && !!result['browser'] && !!result['os'] && !!result['phsrid'] && !!result['url'] && !!result['mailingid'] && !!result['groupID'] && !!result['uuid']) {
+    function replaceGETParams() {
+        var url = window.location.href.split('?')[0];
+        window.history.pushState("", "", url );
+    }
 
+    function checkForCompleteResult() {
+        if(settings.useHistoryReplace && !!result['userID'] && !!result['groupID'] && !!result['uuid']){
+            replaceGETParams();
+        }
+        if((!!result['ip'] || settings.anonymizeip == true) && !!result['userID'] && !!result['timestamp'] && !!result['browser'] && !!result['os'] && !!result['phsrid'] && !!result['url'] && !!result['mailingid'] && !!result['groupID'] && !!result['uuid']) {
             log('firing request! Containing data:')
             log(result)
             var xhr = new XMLHttpRequest();
